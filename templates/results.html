@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results — FlashMind</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810; --card: #0f0f1a; --card2: #14141f;
+    --border: #1e1e30; --accent: #7c6aff; --accent2: #ff6a9e;
+    --green: #00ffb3; --yellow: #ffe066; --text: #e8e8ff; --dim: #6b6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 700px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+  nav { padding: 20px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 60px; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+
+  .result-hero { text-align: center; margin-bottom: 60px; }
+  .trophy { font-size: 72px; margin-bottom: 24px; animation: bounce 0.6s ease; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+  .result-hero h1 { font-family: 'Syne', sans-serif; font-size: 42px; font-weight: 800; letter-spacing: -2px; margin-bottom: 12px; }
+  .result-hero p { color: var(--dim); font-size: 14px; }
+
+  .score-ring {
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: conic-gradient(var(--green) var(--pct), var(--border) 0);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 48px;
+    position: relative;
+  }
+  .score-ring::before {
+    content: ''; position: absolute;
+    inset: 16px; border-radius: 50%;
+    background: var(--bg);
+  }
+  .score-num {
+    position: relative; z-index: 1;
+    font-family: 'Syne', sans-serif;
+    font-size: 36px; font-weight: 800;
+    color: var(--green);
+  }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; }
+  .stat-card .num { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; display: block; margin-bottom: 6px; }
+  .stat-card .lbl { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .easy-card .num { color: var(--green); }
+  .medium-card .num { color: var(--yellow); }
+  .hard-card .num { color: var(--accent2); }
+
+  .review-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 40px; }
+  .review-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
+  .review-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .review-item:last-child { border-bottom: none; }
+  .review-badge { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .badge-easy   { color: var(--green);   background: rgba(0,255,179,0.1);   border: 1px solid rgba(0,255,179,0.3); }
+  .badge-medium { color: var(--yellow);  background: rgba(255,224,102,0.1); border: 1px solid rgba(255,224,102,0.3); }
+  .badge-hard   { color: var(--accent2); background: rgba(255,106,158,0.1); border: 1px solid rgba(255,106,158,0.3); }
+
+  .action-btns { display: flex; gap: 12px; margin-bottom: 60px; }
+  .action-btn {
+    flex: 1; padding: 16px; border-radius: 10px;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; text-decoration: none; text-align: center;
+    transition: transform 0.1s, opacity 0.2s; border: none;
+  }
+  .action-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
+  .btn-secondary { background: var(--card); border: 1px solid var(--border) !important; color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <a href="/" class="logo">FlashMind</a>
+  </nav>
+
+  <div class="result-hero">
+    <div class="trophy">🎉</div>
+    <h1>Session Complete!</h1>
+    <p>{{ deck.topic[:50] }}</p>
+  </div>
+
+  {% set answered = stats.easy + stats.medium + stats.hard %}
+  {% set easy_pct = ((answered / stats.total) * 100) | int if stats.total > 0 else 0 %}
+  <div class="score-ring" style="--pct: {{ easy_pct }}%">
+    <div class="score-num">{{ easy_pct }}%</div>
+  </div>
+  <p style="text-align:center; color: var(--dim); font-size:12px; margin-top:-36px; margin-bottom:40px;">cards completed</p>
+
+  <div class="stats-grid">
+    <div class="stat-card easy-card">
+      <span class="num">{{ stats.easy }}</span>
+      <span class="lbl">😊 Easy</span>
+    </div>
+    <div class="stat-card medium-card">
+      <span class="num">{{ stats.medium }}</span>
+      <span class="lbl">😐 Medium</span>
+    </div>
+    <div class="stat-card hard-card">
+      <span class="num">{{ stats.hard }}</span>
+      <span class="lbl">😣 Hard</span>
+    </div>
+  </div>
+
+  <div class="review-box">
+    <div class="review-title">📅 Spaced Repetition Schedule</div>
+    <div class="review-item">
+      <span>😊 Easy cards — review in</span>
+      <span class="review-badge badge-easy">7 days</span>
+    </div>
+    <div class="review-item">
+      <span>😐 Medium cards — review in</span>
+      <span class="review-badge badge-medium">3 days</span>
+    </div>
+    <div class="review-item">
+      <span>😣 Hard cards — review in</span>
+      <span class="review-badge badge-hard">Tomorrow</span>
+    </div>
+    <div class="review-item">
+      <span>Total cards studied</span>
+      <span style="color: var(--text); font-weight: 700;">{{ stats.total }}</span>
+    </div>
+  </div>
+
+  <div class="action-btns">
+    <a href="/study/{{ deck.id }}" class="action-btn btn-primary">🔄 Study Again</a>
+    <a href="/" class="action-btn btn-secondary">🏠 Home</a>
+  </div>
+</div>
+</body>
+</html>

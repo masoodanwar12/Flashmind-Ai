@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study — {{ deck.topic }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --card: #0f0f1a;
+    --card2: #14141f;
+    --border: #1e1e30;
+    --accent: #7c6aff;
+    --accent2: #ff6a9e;
+    --green: #00ffb3;
+    --yellow: #ffe066;
+    --text: #e8e8ff;
+    --dim: #6b6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 760px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+  /* NAV */
+  nav {
+    padding: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-decoration: none;
+  }
+  .back-btn {
+    font-size: 12px;
+    color: var(--dim);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* PROGRESS BAR */
+  .progress-section { margin-bottom: 32px; }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .progress-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dim);
+  }
+  .progress-count { font-size: 12px; color: var(--dim); }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* STATS ROW */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .stat-box {
+    flex: 1;
+    min-width: 80px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    display: block;
+  }
+  .stat-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .stat-easy .stat-num   { color: var(--green); }
+  .stat-medium .stat-num { color: var(--yellow); }
+  .stat-hard .stat-num   { color: var(--accent2); }
+  .stat-new .stat-num    { color: var(--dim); }
+
+  /* TOPIC */
+  .topic-label {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .topic-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 32px;
+    letter-spacing: -0.5px;
+  }
+
+  /* FLASHCARD */
+  .card-area {
+    perspective: 1200px;
+    margin-bottom: 28px;
+    cursor: pointer;
+  }
+  .flashcard {
+    width: 100%;
+    min-height: 280px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .flashcard.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 280px;
+  }
+  .card-front {
+    background: var(--card);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-front::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .card-back {
+    background: var(--card2);
+    border: 1px solid rgba(124,106,255,0.3);
+    transform: rotateY(180deg);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-back::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--green), var(--accent));
+  }
+
+  .card-badge {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+  .front-badge { color: var(--accent); background: rgba(124,106,255,0.1); border: 1px solid rgba(124,106,255,0.2); }
+  .back-badge  { color: var(--green);  background: rgba(0,255,179,0.1);   border: 1px solid rgba(0,255,179,0.2); }
+
+  .card-question {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 20px;
+  }
+  .card-answer {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .card-hint {
+    font-size: 12px;
+    color: var(--dim);
+    font-style: italic;
+  }
+  .flip-hint {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ANSWER INPUT */
+  .answer-section {
+    margin-bottom: 20px;
+    display: block;
+  }
+  .answer-label {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .answer-input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+  .answer-input:focus { border-color: var(--accent); }
+  .answer-input::placeholder { color: var(--dim); }
+  .answer-input:disabled { opacity: 0.6; }
+
+  .check-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-bottom: 16px;
+  }
+  .check-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .check-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* RESULT BOX */
+  .result-box {
+    display: none;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .result-box.show { display: block; }
+  .result-box.correct {
+    background: rgba(0,255,179,0.07);
+    border-color: rgba(0,255,179,0.3);
+  }
+  .result-box.wrong {
+    background: rgba(255,106,158,0.07);
+    border-color: rgba(255,106,158,0.3);
+  }
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .result-box.correct .result-title { color: var(--green); }
+  .result-box.wrong   .result-title { color: var(--accent2); }
+  .result-answer {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .result-label {
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  /* RATING BUTTONS */
+  .rating-section {
+    display: none;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .rating-section.show { display: flex; }
+  .rating-label {
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .rate-btn {
+    flex: 1;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    background: transparent;
+  }
+  .rate-btn:hover { transform: translateY(-2px); opacity: 0.8; }
+  .rate-btn:active { transform: translateY(0); }
+  .btn-hard   { color: var(--accent2); border-color: rgba(255,106,158,0.4); }
+  .btn-medium { color: var(--yellow);  border-color: rgba(255,224,102,0.4); }
+  .btn-easy   { color: var(--green);   border-color: rgba(0,255,179,0.4); }
+  .btn-hard:hover   { background: rgba(255,106,158,0.1); }
+  .btn-medium:hover { background: rgba(255,224,102,0.1); }
+  .btn-easy:hover   { background: rgba(0,255,179,0.1); }
+
+  /* NAVIGATION */
+  .nav-btns {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .nav-btn {
+    flex: 1;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+  }
+  .nav-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+  .finish-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: white;
+  }
+  .finish-btn:hover { border: none; opacity: 0.9; }
+
+  /* CARD NUMBER DOTS */
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .dot.active  { background: var(--accent); }
+  .dot.done    { background: var(--green); }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <a href="/" class="logo">FlashMind</a>
+    <a href="/" class="back-btn">← All Decks</a>
+  </nav>
+
+  <div class="topic-label">studying</div>
+  <div class="topic-name">{{ deck.topic[:60] }}{% if deck.topic|length > 60 %}...{% endif %}</div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Progress</span>
+      <span class="progress-count" id="progressCount">0 / {{ deck.total_cards }}</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box stat-new">
+      <span class="stat-num" id="statNew">{{ stats.new }}</span>
+      <span class="stat-label">New</span>
+    </div>
+    <div class="stat-box stat-hard">
+      <span class="stat-num" id="statHard">{{ stats.hard }}</span>
+      <span class="stat-label">Hard</span>
+    </div>
+    <div class="stat-box stat-medium">
+      <span class="stat-num" id="statMedium">{{ stats.medium }}</span>
+      <span class="stat-label">Medium</span>
+    </div>
+    <div class="stat-box stat-easy">
+      <span class="stat-num" id="statEasy">{{ stats.easy }}</span>
+      <span class="stat-label">Easy</span>
+    </div>
+  </div>
+
+  <!-- CARD DOTS -->
+  <div class="dots" id="dots">
+    {% for card in deck.cards %}
+    <div class="dot {% if loop.first %}active{% endif %}" id="dot{{ loop.index0 }}"></div>
+    {% endfor %}
+  </div>
+
+  <!-- FLASHCARD -->
+  <div class="card-area" onclick="flipCard()">
+    <div class="flashcard" id="flashcard">
+      <div class="card-face card-front">
+        <div class="card-badge front-badge">Question</div>
+        <div class="card-question" id="cardQuestion">{{ deck.cards[0].question }}</div>
+        <div class="card-hint" id="cardHint">💡 {{ deck.cards[0].hint }}</div>
+        <div class="flip-hint">👆 Click to reveal answer</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-badge back-badge">Answer</div>
+        <div class="card-answer" id="cardAnswer">{{ deck.cards[0].answer }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANSWER INPUT -->
+  <div class="answer-section" id="answerSection">
+    <span class="answer-label">✍️ Write your answer first</span>
+    <textarea class="answer-input" id="answerInput" placeholder="Type your answer here before flipping the card..."></textarea>
+    <button class="check-btn" id="checkBtn" onclick="checkAnswer()">⚡ Check My Answer</button>
+  </div>
+
+  <!-- RESULT BOX -->
+  <div class="result-box" id="resultBox">
+    <div class="result-label" id="resultLabel"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-answer" id="resultAnswer"></div>
+  </div>
+
+  <!-- RATING -->
+  <div class="rating-section" id="ratingSection">
+    <div class="rating-label" style="width:100%">How well did you know this?</div>
+    <button class="rate-btn btn-hard"   onclick="rateCard('hard')">😣 Hard</button>
+    <button class="rate-btn btn-medium" onclick="rateCard('medium')">😐 Medium</button>
+    <button class="rate-btn btn-easy"   onclick="rateCard('easy')">😊 Easy</button>
+  </div>
+
+  <!-- NAV BUTTONS -->
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="prevCard()" disabled>← Previous</button>
+    <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+    <button class="nav-btn finish-btn" onclick="window.location='/results/{{ deck.id }}'">Finish 🎉</button>
+  </div>
+</div>
+
+<script>
+  const cards  = {{ deck.cards | tojson }};
+  const deckId = "{{ deck.id }}";
+  let current  = 0;
+  let isFlipped = false;
+  let rated = new Set();
+
+  function showCard(index) {
+    const card = cards[index];
+    document.getElementById('cardQuestion').textContent = card.question;
+    document.getElementById('cardAnswer').textContent   = card.answer;
+    document.getElementById('cardHint').textContent     = '💡 ' + card.hint;
+
+    // Reset everything
+    isFlipped = false;
+    document.getElementById('flashcard').classList.remove('flipped');
+    document.getElementById('ratingSection').classList.remove('show');
+    document.getElementById('resultBox').classList.remove('show', 'correct', 'wrong');
+    document.getElementById('answerInput').value = '';
+    document.getElementById('answerInput').disabled = false;
+    document.getElementById('checkBtn').disabled = false;
+    document.getElementById('checkBtn').textContent = '⚡ Check My Answer';
+    document.getElementById('answerSection').style.display = 'block';
+
+    // Update dots
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.remove('active');
+      if (rated.has(i)) d.classList.add('done');
+      else d.classList.remove('done');
+    });
+    document.getElementById('dot' + index).classList.add('active');
+
+    // Update buttons
+    document.getElementById('prevBtn').disabled = index === 0;
+    document.getElementById('nextBtn').disabled = index === cards.length - 1;
+
+    // Update progress
+    const done = rated.size;
+    const pct  = Math.round((done / cards.length) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressCount').textContent = done + ' / ' + cards.length;
+  }
+
+  async function checkAnswer() {
+    const userAnswer = document.getElementById('answerInput').value.trim();
+    if (!userAnswer) {
+      alert('Please write your answer first! ✍️');
+      return;
+    }
+
+    // Show loading state
+    const checkBtn = document.getElementById('checkBtn');
+    checkBtn.textContent = '🧠 AI is checking...';
+    checkBtn.disabled = true;
+
+    const card = cards[current];
+
+    // Call AI to check answer
+    const response = await fetch('/check_answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: card.question,
+        correct_answer: card.answer,
+        user_answer: userAnswer
+      })
+    });
+    const result = await response.json();
+
+    const resultBox    = document.getElementById('resultBox');
+    const resultTitle  = document.getElementById('resultTitle');
+    const resultLabel  = document.getElementById('resultLabel');
+    const resultAnswer = document.getElementById('resultAnswer');
+
+    resultBox.classList.add('show');
+
+    if (result.correct) {
+      resultBox.classList.add('correct');
+      resultBox.classList.remove('wrong');
+      resultTitle.textContent = '✅ ' + result.feedback;
+      resultLabel.textContent = 'Correct Answer:';
+      resultAnswer.textContent = card.answer;
+    } else {
+      resultBox.classList.add('wrong');
+      resultBox.classList.remove('correct');
+      resultTitle.textContent = '❌ ' + result.feedback;
+      resultLabel.textContent = result.missing ? 'You missed: ' + result.missing + ' | Correct Answer:' : 'Correct Answer:';
+      resultAnswer.textContent = card.answer;
+    }
+
+    // Flip card to show answer
+    isFlipped = true;
+    document.getElementById('flashcard').classList.add('flipped');
+
+    // Disable input, show rating
+    document.getElementById('answerInput').disabled = true;
+    checkBtn.textContent = '✅ Checked!';
+    document.getElementById('ratingSection').classList.add('show');
+  }
+
+  function flipCard() {
+    // If answer already checked, just flip visually
+    isFlipped = !isFlipped;
+    document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
+    if (isFlipped && !document.getElementById('ratingSection').classList.contains('show')) {
+      document.getElementById('ratingSection').classList.add('show');
+      document.getElementById('answerInput').disabled = true;
+      document.getElementById('checkBtn').disabled = true;
+    }
+  }
+
+  function nextCard() {
+    if (current < cards.length - 1) {
+      current++;
+      showCard(current);
+    }
+  }
+
+  function prevCard() {
+    if (current > 0) {
+      current--;
+      showCard(current);
+    }
+  }
+
+  async function rateCard(status) {
+    const card = cards[current];
+    rated.add(current);
+
+    await fetch('/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deck_id: deckId, card_id: card.id, status: status })
+    }).then(r => r.json()).then(data => {
+      if (data.stats) {
+        document.getElementById('statNew').textContent    = data.stats.new    || 0;
+        document.getElementById('statHard').textContent   = data.stats.hard   || 0;
+        document.getElementById('statMedium').textContent = data.stats.medium || 0;
+        document.getElementById('statEasy').textContent   = data.stats.easy   || 0;
+      }
+    });
+
+    if (current < cards.length - 1) {
+      current++;
+      showCard(current);
+    } else {
+      window.location = '/results/' + deckId;
+    }
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') nextCard();
+    if (e.key === 'ArrowLeft')  prevCard();
+    if (e.key === '1') rateCard('hard');
+    if (e.key === '2') rateCard('medium');
+    if (e.key === '3') rateCard('easy');
+  });
+
+  showCard(0);
+</script>
+</body>
+</html>

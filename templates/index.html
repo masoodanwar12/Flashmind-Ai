@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlashMind — AI Flashcard App</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --card: #0f0f1a;
+    --card2: #14141f;
+    --border: #1e1e30;
+    --accent: #7c6aff;
+    --accent2: #ff6a9e;
+    --green: #00ffb3;
+    --yellow: #ffe066;
+    --text: #e8e8ff;
+    --dim: #6b6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+  /* NAV */
+  nav {
+    padding: 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--green); -webkit-text-fill-color: var(--green); }
+  .nav-tag {
+    font-size: 11px;
+    color: var(--dim);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 80px 0 60px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(124,106,255,0.1);
+    border: 1px solid rgba(124,106,255,0.3);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 28px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    letter-spacing: -2px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--dim);
+    font-size: 15px;
+    max-width: 480px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+  }
+
+  /* GENERATE FORM */
+  .gen-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 620px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .gen-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .gen-box label {
+    display: block;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .gen-box textarea {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 16px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+  .gen-box textarea:focus { border-color: var(--accent); }
+  .gen-box textarea::placeholder { color: var(--dim); }
+
+  .gen-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .gen-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .gen-btn:active { transform: translateY(0); }
+  .gen-btn.loading { opacity: 0.7; pointer-events: none; }
+
+  .error-msg {
+    background: rgba(255,70,80,0.1);
+    border: 1px solid rgba(255,70,80,0.3);
+    color: #ff4757;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* FEATURES */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 60px 0;
+  }
+  @media(max-width: 600px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .feature-icon { font-size: 28px; margin-bottom: 12px; }
+  .feature h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature p { font-size: 12px; color: var(--dim); line-height: 1.6; }
+
+  /* DECKS SECTION */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .decks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 60px;
+  }
+  .deck-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s, transform 0.2s;
+    display: block;
+  }
+  .deck-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .deck-topic {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .deck-meta { font-size: 11px; color: var(--dim); margin-bottom: 14px; }
+  .deck-stats { display: flex; gap: 8px; }
+  .stat-pill {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid;
+  }
+  .stat-easy   { color: var(--green);  border-color: rgba(0,255,179,0.3);  background: rgba(0,255,179,0.08); }
+  .stat-medium { color: var(--yellow); border-color: rgba(255,224,102,0.3); background: rgba(255,224,102,0.08); }
+  .stat-hard   { color: var(--accent2);border-color: rgba(255,106,158,0.3); background: rgba(255,106,158,0.08); }
+  .stat-new    { color: var(--dim);    border-color: var(--border);          background: transparent; }
+
+  /* LOADING OVERLAY */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8,8,16,0.95);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .loading-sub { font-size: 12px; color: var(--dim); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 0;
+    text-align: center;
+    font-size: 11px;
+    color: var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">🧠 AI is thinking...</div>
+  <div class="loading-sub">Generating your flashcards. This takes ~10 seconds</div>
+</div>
+
+<div class="container">
+  <nav>
+    <div class="logo">Flash<span>Mind</span></div>
+    <div class="nav-tag">Powered by Groq AI</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge">✦ AI-Powered Learning</div>
+    <h1>Study smarter with<br><span class="grad">AI Flashcards</span></h1>
+    <p>Paste any topic or notes. Our AI generates smart flashcards, tests you, and tracks your progress with spaced repetition.</p>
+
+    <div class="gen-box">
+      {% if error %}
+      <div class="error-msg">❌ {{ error }}</div>
+      {% endif %}
+      <form action="/generate" method="POST" id="genForm">
+        <label>Paste your topic or notes below</label>
+        <textarea name="topic" placeholder="Example: Python loops, OOP concepts, Machine learning basics, World War 2 events, or paste your study notes here..." required></textarea>
+        <button type="submit" class="gen-btn" id="genBtn">
+          ⚡ Generate Flashcards with AI
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">&#9881;</div>
+      <h3>AI Generated</h3>
+      <p>Groq AI creates 10 smart flashcards from any topic or notes instantly</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#8635;</div>
+      <h3>Spaced Repetition</h3>
+      <p>Hard cards shown tomorrow, easy cards in 7 days — just like Anki!</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#9998;</div>
+      <h3>Track Progress</h3>
+      <p>See exactly how many cards you know, are learning, or need review</p>
+    </div>
+  </div>
+
+  {% if decks %}
+  <div class="section-title">Your Study Decks</div>
+  <div class="decks-grid">
+    {% for deck in decks %}
+    <a href="/study/{{ deck.id }}" class="deck-card">
+      <div class="deck-topic">{{ deck.topic[:40] }}{% if deck.topic|length > 40 %}...{% endif %}</div>
+      <div class="deck-meta">{{ deck.total_cards }} cards · {{ deck.created_at }}</div>
+      <div class="deck-stats">
+        <span class="stat-pill stat-new">{{ deck.total_cards }} total</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <footer>FlashMind · Built with Python + Groq AI · Study smarter 🧠</footer>
+</div>
+
+<script>
+  document.getElementById('genForm').addEventListener('submit', function() {
+    document.getElementById('loadingOverlay').classList.add('show');
+    document.getElementById('genBtn').classList.add('loading');
+    document.getElementById('genBtn').textContent = '⏳ Generating...';
+  });
+</script>
+</body>
+</html>
